@@ -35,6 +35,7 @@ api.interceptors.response.use(
 export const fetchCourses = () => api.get('/api/courses')
 export const fetchCourse = (id) => api.get(`/api/courses/${id}`)
 export const createCourse = (payload) => api.post('/api/courses', payload)
+export const updateCourse = (id, payload) => api.put(`/api/courses/${id}`, payload)
 export const deleteCourse = (id) => api.delete(`/api/courses/${id}`)
 export const fetchUsers = () => api.get('/api/users')
 
@@ -54,6 +55,8 @@ export const enrollInCourse = (courseId) => api.post(`/api/enrollments/${courseI
 
 export const updateEnrollmentProgress = (enrollmentId, progressPercent) =>
   api.patch(`/api/enrollments/${enrollmentId}/progress`, { progressPercent })
+export const fetchRevenueSummary = () => api.get('/api/revenue/summary')
+export const fetchRevenueInsights = () => api.get('/api/revenue/insights')
 export const downloadRevenueCsv = async () => {
   try {
     return await api.get('/api/revenue/export', { responseType: 'blob' })
@@ -62,5 +65,7 @@ export const downloadRevenueCsv = async () => {
     return api.get('/api/revenue/csv', { responseType: 'blob' })
   }
 }
+export const fetchAdminAnalytics = () => api.get('/api/analytics/overview')
+export const fetchTopCourses = () => api.get('/api/analytics/top-courses')
 
 export default api

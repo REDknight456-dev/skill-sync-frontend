@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createCourse, deleteCourse, fetchCourses } from '../api'
+import { createCourse, deleteCourse, fetchCourses, updateCourse } from '../api'
 import LoadingScreen from '../components/loading/LoadingScreen.jsx'
 
 const AdminCourseManager = () => {
@@ -7,6 +7,7 @@ const AdminCourseManager = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [draft, setDraft] = useState({ title: '', description: '', instructor: '', price: '' })
 
   const loadCourses = async () => {
@@ -28,10 +29,25 @@ const AdminCourseManager = () => {
 
   const openForNew = () => {
     setDraft({ title: '', description: '', instructor: '', price: '' })
+    setEditingId(null)
     setIsModalOpen(true)
   }
 
-  const closeModal = () => setIsModalOpen(false)
+  const openForEdit = (course) => {
+    setDraft({
+      title: course.title || '',
+      description: course.description || '',
+      instructor: course.instructor || '',
+      price: course.price ?? '',
+    })
+    setEditingId(course.id)
+    setIsModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setEditingId(null)
+  }
 
   const handleChange = (e) => {
     const value = e.target.name === 'price' ? Number(e.target.value) : e.target.value
@@ -43,11 +59,17 @@ const AdminCourseManager = () => {
     if (!draft.title || !draft.instructor) return
 
     try {
-      const { data } = await createCourse(draft)
-      setCourses((prev) => [...prev, data])
+      if (editingId) {
+        const { data } = await updateCourse(editingId, draft)
+        setCourses((prev) => prev.map((c) => (c.id === editingId ? data : c)))
+      } else {
+        const { data } = await createCourse(draft)
+        setCourses((prev) => [...prev, data])
+      }
       setIsModalOpen(false)
+      setEditingId(null)
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to create course')
+      setError(err?.response?.data?.message || 'Unable to save course')
     }
   }
 
@@ -128,6 +150,9 @@ const AdminCourseManager = () => {
                   <td className="px-4 py-3 text-slate-300 line-clamp-2">{course.description}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
+                      <button className="secondary-btn px-3" onClick={() => openForEdit(course)}>
+                        Edit
+                      </button>
                       <button className="secondary-btn px-3" onClick={() => handleDelete(course.id)}>
                         Delete
                       </button>
@@ -144,7 +169,9 @@ const AdminCourseManager = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="glass-card w-full max-w-lg rounded-2xl p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-white">Add new course</h3>
+              <h3 className="text-xl font-semibold text-white">
+                {editingId ? 'Edit course' : 'Add new course'}
+              </h3>
               <button className="secondary-btn px-3" onClick={closeModal}>
                 Close
               </button>
@@ -199,7 +226,7 @@ const AdminCourseManager = () => {
                   Cancel
                 </button>
                 <button type="submit" className="primary-btn">
-                  Create course
+                  {editingId ? 'Save changes' : 'Create course'}
                 </button>
               </div>
             </form>

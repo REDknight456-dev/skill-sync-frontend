@@ -5,8 +5,10 @@ import useAuth from '../hooks/useAuth.js'
 const Login = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, submitting, error, setError } = useAuth()
+  const { login, verifyTwoFactor, twoFactorPending, submitting, error, setError } = useAuth()
   const [form, setForm] = useState({ email: '', password: '' })
+  const [twoFactorOpen, setTwoFactorOpen] = useState(false)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -16,7 +18,23 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      await login(form)
+      const result = await login(form)
+      if (result?.requires2fa) {
+        setTwoFactorOpen(true)
+        return
+      }
+
+      const redirect = location.state?.from?.pathname || '/'
+      navigate(redirect, { replace: true })
+    } catch (err) {
+      /* error handled in context */
+    }
+  }
+
+  const handleVerify = async (e) => {
+    e.preventDefault()
+    try {
+      await verifyTwoFactor({ code: twoFactorCode })
       const redirect = location.state?.from?.pathname || '/'
       navigate(redirect, { replace: true })
     } catch (err) {
@@ -75,6 +93,58 @@ const Login = () => {
           </Link>
         </p>
       </div>
+
+      {twoFactorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="glass-card w-full max-w-md rounded-2xl p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-white">2FA verification</h3>
+              <span className="badge">Email code</span>
+            </div>
+            <p className="mt-2 text-sm text-slate-300">
+              Enter the verification code we just emailed you to finish signing in.
+            </p>
+            {error && (
+              <div className="mt-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-100">
+                {error}
+              </div>
+            )}
+            <form className="mt-4 space-y-3" onSubmit={handleVerify}>
+              <div>
+                <label className="block text-sm font-semibold text-slate-200">Code</label>
+                <input
+                  name="twoFactorCode"
+                  value={twoFactorCode}
+                  onChange={(e) => {
+                    setTwoFactorCode(e.target.value)
+                    if (error) setError(null)
+                  }}
+                  placeholder="123456"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() => {
+                    setTwoFactorOpen(false)
+                    setTwoFactorCode('')
+                    setError(null)
+                  }}
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="primary-btn" disabled={submitting || !twoFactorPending}>
+                  {submitting ? 'Verifying...' : 'Verify'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -36,7 +36,6 @@ const Sidebar = ({ open, onClose }) => {
     { to: '/admin/users', label: 'User Management', icon: '👥' },
     { to: '/admin/inventory', label: 'Course Inventory', icon: '📚' },
     { to: '/admin/courses', label: 'Course Manager', icon: '🛠️' },
-    { to: '/admin/revenue', label: 'Revenue Reports', icon: '💹' },
   ]
 
   const sections = [

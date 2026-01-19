@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchCourses, fetchUsers, fetchMyEnrollments } from '../api'
+import { fetchCourses, fetchUsers, fetchMyEnrollments, fetchAdminAnalytics, fetchTopCourses } from '../api'
 import useAuth from '../hooks/useAuth.js'
 
 const Dashboard = () => {
@@ -10,6 +10,10 @@ const Dashboard = () => {
   const [coursesLoading, setCoursesLoading] = useState(true)
   const [usersLoading, setUsersLoading] = useState(true)
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(true)
+  const [analytics, setAnalytics] = useState({})
+  const [topCourses, setTopCourses] = useState([])
+  const [analyticsLoading, setAnalyticsLoading] = useState(role === 'admin')
+  const [topCoursesLoading, setTopCoursesLoading] = useState(role === 'admin')
   const [error, setError] = useState(null)
 
   const highlights =
@@ -56,6 +60,38 @@ const Dashboard = () => {
       }
     }
 
+    const loadAdminAnalytics = async () => {
+      if (role !== 'admin') {
+        setAnalytics({})
+        setAnalyticsLoading(false)
+        return
+      }
+      try {
+        const res = await fetchAdminAnalytics()
+        setAnalytics(res?.data || {})
+      } catch (err) {
+        setError((prev) => prev || err?.response?.data?.message || 'Some data failed to load')
+      } finally {
+        setAnalyticsLoading(false)
+      }
+    }
+
+    const loadTopCourses = async () => {
+      if (role !== 'admin') {
+        setTopCourses([])
+        setTopCoursesLoading(false)
+        return
+      }
+      try {
+        const res = await fetchTopCourses()
+        setTopCourses(Array.isArray(res?.data) ? res.data : [])
+      } catch (err) {
+        setError((prev) => prev || err?.response?.data?.message || 'Some data failed to load')
+      } finally {
+        setTopCoursesLoading(false)
+      }
+    }
+
     const loadEnrollments = async () => {
       if (role === 'admin') {
         setEnrollments([])
@@ -76,6 +112,8 @@ const Dashboard = () => {
     loadCourses()
     loadUsers()
     loadEnrollments()
+    loadAdminAnalytics()
+    loadTopCourses()
   }, [role])
 
   const totalCourses = courses.length
@@ -85,6 +123,9 @@ const Dashboard = () => {
   const totalUsers = users.length
   const adminCount = users.filter((u) => String(u.role || '').toLowerCase().includes('admin')).length
   const learnerCount = Math.max(0, totalUsers - adminCount)
+  const activeUsers = analytics?.activeUsers ?? analytics?.activeUsers30d ?? null
+  const newUsers = analytics?.newUsers ?? analytics?.newUsers30d ?? null
+  const mostPopularCount = analytics?.topCoursePurchases ?? null
 
   const totalEnrollments = enrollments.length
   const completedEnrollments = enrollments.filter((e) => String(e.status || '').toLowerCase().includes('completed')).length
@@ -142,6 +183,20 @@ const Dashboard = () => {
             </p>
             <p className="text-xs text-slate-400">Role breakdown</p>
           </div>
+          <div className="glass-card rounded-2xl p-5">
+            <p className="text-sm text-slate-400">Active Users (30d)</p>
+            <p className="mt-2 text-2xl font-semibold text-white">
+              {analyticsLoading ? '—' : activeUsers ?? '—'}
+            </p>
+            <p className="text-xs text-slate-400">Signed in last 30 days</p>
+          </div>
+          <div className="glass-card rounded-2xl p-5">
+            <p className="text-sm text-slate-400">New Users (30d)</p>
+            <p className="mt-2 text-2xl font-semibold text-white">
+              {analyticsLoading ? '—' : newUsers ?? '—'}
+            </p>
+            <p className="text-xs text-slate-400">Registrations this month</p>
+          </div>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -196,6 +251,58 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
+
+        {role === 'admin' && (
+          <div className="glass-card rounded-2xl p-5 lg:col-span-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Top Courses</h2>
+                <p className="text-sm text-slate-400">Most purchased courses by count</p>
+              </div>
+              <span className="badge">Live</span>
+            </div>
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-sm text-slate-100">
+                <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-slate-300">
+                  <tr>
+                    <th className="px-4 py-3">Course</th>
+                    <th className="px-4 py-3">Purchases</th>
+                    <th className="px-4 py-3">Revenue</th>
+                    <th className="px-4 py-3">ARPU</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(topCoursesLoading ? [] : topCourses).map((c) => (
+                    <tr key={c.id || c.title} className="border-t border-white/5">
+                      <td className="px-4 py-3 font-semibold text-white">{c.title || '—'}</td>
+                      <td className="px-4 py-3 text-slate-200">{c.purchases ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-200">
+                        {c.revenue !== undefined ? `$${Number(c.revenue).toFixed(2)}` : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-200">
+                        {c.arpu !== undefined ? `$${Number(c.arpu).toFixed(2)}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {!topCoursesLoading && topCourses.length === 0 && (
+                    <tr className="border-t border-white/5">
+                      <td className="px-4 py-3 text-slate-300" colSpan={4}>
+                        No purchase data yet.
+                      </td>
+                    </tr>
+                  )}
+                  {topCoursesLoading && (
+                    <tr className="border-t border-white/5">
+                      <td className="px-4 py-3 text-slate-300" colSpan={4}>
+                        Loading top courses…
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

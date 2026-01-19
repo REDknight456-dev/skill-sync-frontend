@@ -6,7 +6,7 @@ const Profile = () => {
 
   const quickStats = [
     { label: 'Member since', value: '2026', note: 'Welcome aboard' },
-    { label: 'Role', value: role?.toUpperCase() || 'USER', note: 'Access level' },
+    { label: 'Email', value: user?.email || '—', note: 'Primary contact' },
     { label: 'Preferred pace', value: '15–20 mins daily', note: 'Consistency first' },
   ]
 

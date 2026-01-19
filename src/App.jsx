@@ -12,7 +12,6 @@ import EnrolledCourses from './pages/EnrolledCourses.jsx'
 import Login from './pages/Login.jsx'
 import Profile from './pages/Profile.jsx'
 import Register from './pages/Register.jsx'
-import RevenueReports from './pages/RevenueReports.jsx'
 import UserManagement from './pages/UserManagement.jsx'
 
 const AppShell = () => {
@@ -63,7 +62,6 @@ const App = () => (
           <Route path="admin/courses" element={<AdminCourseManager />} />
           <Route path="admin/users" element={<UserManagement />} />
           <Route path="admin/inventory" element={<CourseInventory />} />
-          <Route path="admin/revenue" element={<RevenueReports />} />
         </Route>
       </Route>
     </Route>

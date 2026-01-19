@@ -44,14 +44,12 @@ const UserManagement = () => {
           <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-slate-300">
             <tr>
               <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Role</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user) => (
               <tr key={user.email} className="border-t border-white/5">
                 <td className="px-4 py-3 font-semibold text-white">{user.email}</td>
-                <td className="px-4 py-3 text-indigo-200">{user.role || 'ROLE_USER'}</td>
               </tr>
             ))}
           </tbody>

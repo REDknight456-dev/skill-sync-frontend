@@ -1,18 +1,75 @@
-import { useMemo, useState } from 'react'
-import { downloadRevenueCsv } from '../api'
+import { useEffect, useMemo, useState } from 'react'
+import { downloadRevenueCsv, fetchRevenueInsights, fetchRevenueSummary } from '../api'
 
 const RevenueReports = () => {
   const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [summary, setSummary] = useState([])
+  const [insights, setInsights] = useState([])
 
-  const summary = useMemo(
-    () => [
-      { label: 'MRR', value: '$142k' },
-      { label: 'ARPU', value: '$42' },
-      { label: 'Churn', value: '3.2%' },
-    ],
+  const formatCurrency = useMemo(
+    () => (value) => {
+      const amount = Number(value || 0)
+      return amount.toLocaleString(undefined, { style: 'currency', currency: 'USD' })
+    },
     [],
   )
+
+  useEffect(() => {
+    const load = async () => {
+      setError(null)
+      setLoading(true)
+      try {
+        const [metricsRes, insightsRes] = await Promise.all([
+          fetchRevenueSummary(),
+          fetchRevenueInsights(),
+        ])
+
+        const metrics = metricsRes?.data || {}
+        setSummary([
+          { label: 'MRR', value: formatCurrency(metrics.mrr ?? metrics.monthlyRecurringRevenue) },
+          { label: 'ARPU', value: formatCurrency(metrics.arpu ?? metrics.averageRevenuePerUser) },
+          {
+            label: 'Churn',
+            value:
+              metrics.churnPct !== undefined
+                ? `${metrics.churnPct}%`
+                : metrics.churnRate !== undefined
+                  ? `${metrics.churnRate}%`
+                  : '—',
+          },
+        ])
+
+        const pulledInsights = Array.isArray(insightsRes?.data) ? insightsRes.data : []
+        setInsights(
+          pulledInsights.length
+            ? pulledInsights
+            : [
+                'Cohort renewals trending +6% week over week.',
+                'Enterprise upsell pipeline ready for outreach.',
+                'No revenue leaks detected in payouts this week.',
+              ],
+        )
+      } catch (err) {
+        const serverMsg = err?.response?.data?.message
+        setError(serverMsg || 'Unable to load revenue data')
+        setSummary([
+          { label: 'MRR', value: '$0.00' },
+          { label: 'ARPU', value: '$0.00' },
+          { label: 'Churn', value: '—' },
+        ])
+        setInsights([
+          'Fallback data only: live revenue feed unavailable.',
+          'Check backend revenue endpoints for status.',
+        ])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
+  }, [formatCurrency])
 
   const handleDownload = async () => {
     setError(null)
@@ -59,7 +116,9 @@ const RevenueReports = () => {
         {summary.map((item) => (
           <div key={item.label} className="glass-card rounded-2xl p-5">
             <p className="text-sm text-slate-300">{item.label}</p>
-            <p className="mt-2 text-2xl font-semibold text-white">{item.value}</p>
+            <p className="mt-2 text-2xl font-semibold text-white">
+              {loading ? '—' : item.value}
+            </p>
           </div>
         ))}
       </div>
@@ -67,16 +126,14 @@ const RevenueReports = () => {
       <div className="glass-card rounded-2xl p-6">
         <h2 className="text-lg font-semibold text-white">This week</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {['Cohort renewals trending +6%', 'Enterprise upsell pipeline ready', 'Revenue leak checks passed'].map(
-            (item) => (
-              <div
-                key={item}
-                className="rounded-xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-slate-200"
-              >
-                {item}
-              </div>
-            ),
-          )}
+          {(insights.length ? insights : ['Loading insights…']).map((item) => (
+            <div
+              key={item}
+              className="rounded-xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-slate-200"
+            >
+              {loading ? '—' : item}
+            </div>
+          ))}
         </div>
       </div>
     </div>

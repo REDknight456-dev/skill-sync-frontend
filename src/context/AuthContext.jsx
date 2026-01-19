@@ -43,6 +43,7 @@ export const AuthProvider = ({ children }) => {
   const [bootstrapping, setBootstrapping] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [twoFactorSession, setTwoFactorSession] = useState(null)
 
   useEffect(() => {
     setLogoutHandler(handleLogout)
@@ -69,7 +70,15 @@ export const AuthProvider = ({ children }) => {
       }
 
       const response = await api.post('/api/auth/login', { email, password })
-      const { token } = response?.data || {}
+      const { token, requires2fa, twoFactorToken } = response?.data || {}
+
+      if (requires2fa) {
+        if (!twoFactorToken) {
+          throw new Error('Two-factor token missing from server response')
+        }
+        setTwoFactorSession({ email, twoFactorToken })
+        return { requires2fa: true }
+      }
 
       if (!token) {
         throw new Error('No token returned from server')
@@ -82,6 +91,7 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem(STORAGE_KEY, token)
       setUser(parsed)
+      setTwoFactorSession(null)
     } catch (err) {
       setError(err.message || 'Unable to login right now')
       throw err
@@ -120,9 +130,49 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const verifyTwoFactor = async ({ code }) => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      if (!twoFactorSession) {
+        throw new Error('No login session awaiting verification')
+      }
+
+      if (!code) {
+        throw new Error('Verification code is required')
+      }
+
+      const response = await api.post('/api/auth/verify-2fa', {
+        code,
+        twoFactorToken: twoFactorSession.twoFactorToken,
+      })
+
+      const { token } = response?.data || {}
+      if (!token) {
+        throw new Error('Verification failed: no token returned')
+      }
+
+      const parsed = parseUserFromToken(token)
+      if (!parsed) {
+        throw new Error('Invalid token payload')
+      }
+
+      localStorage.setItem(STORAGE_KEY, token)
+      setUser(parsed)
+      setTwoFactorSession(null)
+      return { success: true }
+    } catch (err) {
+      setError(err.message || '2FA verification failed')
+      throw err
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem(STORAGE_KEY)
     setUser(null)
+    setTwoFactorSession(null)
   }
 
   const value = useMemo(
@@ -132,13 +182,15 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated: Boolean(user),
       bootstrapping,
       submitting,
+      twoFactorPending: Boolean(twoFactorSession),
       error,
       login: handleLogin,
       register: handleRegister,
+      verifyTwoFactor,
       logout: handleLogout,
       setError,
     }),
-    [user, bootstrapping, submitting, error],
+    [user, bootstrapping, submitting, error, twoFactorSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
