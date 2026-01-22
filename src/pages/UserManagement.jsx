@@ -34,11 +34,6 @@ const UserManagement = () => {
         </div>
         <button className="primary-btn" onClick={() => window.location.reload()}>Refresh</button>
       </div>
-      {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-          {error}
-        </div>
-      )}
       <div className="glass-card overflow-hidden rounded-2xl">
         <table className="min-w-full text-sm text-slate-100">
           <thead className="bg-white/5 text-left text-xs uppercase tracking-wide text-slate-300">

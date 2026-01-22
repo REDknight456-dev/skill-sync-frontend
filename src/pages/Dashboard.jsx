@@ -10,9 +10,7 @@ const Dashboard = () => {
   const [coursesLoading, setCoursesLoading] = useState(true)
   const [usersLoading, setUsersLoading] = useState(true)
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(true)
-  const [analytics, setAnalytics] = useState({})
   const [topCourses, setTopCourses] = useState([])
-  const [analyticsLoading, setAnalyticsLoading] = useState(role === 'admin')
   const [topCoursesLoading, setTopCoursesLoading] = useState(role === 'admin')
   const [error, setError] = useState(null)
 
@@ -60,22 +58,6 @@ const Dashboard = () => {
       }
     }
 
-    const loadAdminAnalytics = async () => {
-      if (role !== 'admin') {
-        setAnalytics({})
-        setAnalyticsLoading(false)
-        return
-      }
-      try {
-        const res = await fetchAdminAnalytics()
-        setAnalytics(res?.data || {})
-      } catch (err) {
-        setError((prev) => prev || err?.response?.data?.message || 'Some data failed to load')
-      } finally {
-        setAnalyticsLoading(false)
-      }
-    }
-
     const loadTopCourses = async () => {
       if (role !== 'admin') {
         setTopCourses([])
@@ -112,7 +94,6 @@ const Dashboard = () => {
     loadCourses()
     loadUsers()
     loadEnrollments()
-    loadAdminAnalytics()
     loadTopCourses()
   }, [role])
 
@@ -123,9 +104,6 @@ const Dashboard = () => {
   const totalUsers = users.length
   const adminCount = users.filter((u) => String(u.role || '').toLowerCase().includes('admin')).length
   const learnerCount = Math.max(0, totalUsers - adminCount)
-  const activeUsers = analytics?.activeUsers ?? analytics?.activeUsers30d ?? null
-  const newUsers = analytics?.newUsers ?? analytics?.newUsers30d ?? null
-  const mostPopularCount = analytics?.topCoursePurchases ?? null
 
   const totalEnrollments = enrollments.length
   const completedEnrollments = enrollments.filter((e) => String(e.status || '').toLowerCase().includes('completed')).length
@@ -153,12 +131,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-          {error}
-        </div>
-      )}
-
       {role === 'admin' ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="glass-card rounded-2xl p-5">
@@ -175,27 +147,6 @@ const Dashboard = () => {
             <p className="text-sm text-slate-400">Total Users</p>
             <p className="mt-2 text-2xl font-semibold text-white">{usersLoading ? '—' : totalUsers}</p>
             <p className="text-xs text-slate-400">Current directory</p>
-          </div>
-          <div className="glass-card rounded-2xl p-5">
-            <p className="text-sm text-slate-400">Admins vs Learners</p>
-            <p className="mt-2 text-2xl font-semibold text-white">
-              {usersLoading ? '—' : `${adminCount} / ${learnerCount}`}
-            </p>
-            <p className="text-xs text-slate-400">Role breakdown</p>
-          </div>
-          <div className="glass-card rounded-2xl p-5">
-            <p className="text-sm text-slate-400">Active Users (30d)</p>
-            <p className="mt-2 text-2xl font-semibold text-white">
-              {analyticsLoading ? '—' : activeUsers ?? '—'}
-            </p>
-            <p className="text-xs text-slate-400">Signed in last 30 days</p>
-          </div>
-          <div className="glass-card rounded-2xl p-5">
-            <p className="text-sm text-slate-400">New Users (30d)</p>
-            <p className="mt-2 text-2xl font-semibold text-white">
-              {analyticsLoading ? '—' : newUsers ?? '—'}
-            </p>
-            <p className="text-xs text-slate-400">Registrations this month</p>
           </div>
         </div>
       ) : (

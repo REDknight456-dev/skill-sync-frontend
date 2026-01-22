@@ -6,6 +6,7 @@ const AdminCourseManager = () => {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [draft, setDraft] = useState({ title: '', description: '', instructor: '', price: '' })
@@ -59,12 +60,15 @@ const AdminCourseManager = () => {
     if (!draft.title || !draft.instructor) return
 
     try {
+      setSuccess(null)
       if (editingId) {
         const { data } = await updateCourse(editingId, draft)
         setCourses((prev) => prev.map((c) => (c.id === editingId ? data : c)))
+        setSuccess('Course updated successfully')
       } else {
         const { data } = await createCourse(draft)
         setCourses((prev) => [...prev, data])
+        setSuccess('Course created successfully')
       }
       setIsModalOpen(false)
       setEditingId(null)
@@ -111,6 +115,11 @@ const AdminCourseManager = () => {
       {error && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
           {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+          {success}
         </div>
       )}
 
